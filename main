@@ -100,7 +100,6 @@ public class TDE04Ordenacao {
 
             imprimirTabelaConsole(resultados);
             salvarCSV(resultados, Path.of("resultados_tempos.csv"));
-            instrucoesRelatorio();
 
         } catch (Exception e) {
             System.err.println("ERRO: " + e.getMessage());
@@ -114,19 +113,16 @@ public class TDE04Ordenacao {
             return new File(args[0]);
         }
 
-        // 1) Pasta esperada na raiz
         File raiz = new File("conjuntosDeDados");
         if (raiz.exists() && raiz.isDirectory()) {
             return raiz;
         }
 
-        // 2) Pasta dentro de src (seu caso atual)
         File src = new File("src/conjuntosDeDados");
         if (src.exists() && src.isDirectory()) {
             return src;
         }
 
-        // 3) Fallback
         return new File(".");
     }
 
@@ -264,16 +260,6 @@ public class TDE04Ordenacao {
         }
 
         Files.write(destino, linhas);
-    }
-
-    private static void instrucoesRelatorio() {
-        System.out.println();
-        System.out.println("=== ORIENTAÇÃO PARA O RELATÓRIO (PDF) ===");
-        System.out.println("- Use os dados de 'resultados_tempos.csv' para montar a tabela e um gráfico comparativo.");
-        System.out.println("- Compare aleatório x crescente x decrescente.");
-        System.out.println("- Comente impacto do tamanho (100 → 10.000).");
-        System.out.println("- Cite que o tempo foi medido com System.nanoTime().");
-        System.out.println("=========================================");
     }
 
     private static String capitalize(String s) {
