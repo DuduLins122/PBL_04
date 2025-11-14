@@ -1,0 +1,283 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * TDE 04 - Comparação de Algoritmos de Ordenação
+ * Professora: Marina de Lara
+ *
+ * REGRAS ATENDIDAS:
+ * - Uma única classe pública (este arquivo).
+ * - Implementa Bubble Sort, Insertion Sort e Quick Sort, sem bibliotecas externas.
+ * - Lê os 9 conjuntos de dados (CSV) informados no enunciado.
+ * - Mede tempo com System.nanoTime().
+ * - Mostra tabela no console e grava "resultados_tempos.csv" com os tempos.
+ *
+ * COMO USAR:
+ * 1) Coloque este arquivo em src/ do projeto.
+ * 2) Crie a pasta "conjuntosDeDados" na raiz OU dentro de src.
+ * 3) Execute normalmente no IntelliJ.
+ */
+public class TDE04Ordenacao {
+
+    private static final String[] ESPERADOS = new String[] {
+            "aleatorio_100.csv", "aleatorio_1000.csv", "aleatorio_10000.csv",
+            "crescente_100.csv", "crescente_1000.csv", "crescente_10000.csv",
+            "decrescente_100.csv", "decrescente_1000.csv", "decrescente_10000.csv"
+    };
+
+    private static class Registro {
+        String conjunto;
+        int tamanho;
+        long bubbleMs;
+        long insertionMs;
+        long quickMs;
+
+        Registro(String conjunto, int tamanho, long bubbleMs, long insertionMs, long quickMs) {
+            this.conjunto = conjunto;
+            this.tamanho = tamanho;
+            this.bubbleMs = bubbleMs;
+            this.insertionMs = insertionMs;
+            this.quickMs = quickMs;
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            File base = obterDiretorioBase(args);
+            System.out.println("Lendo arquivos CSV a partir de: " + base.getPath());
+
+            List<Registro> resultados = new ArrayList<>();
+
+            for (String nome : ESPERADOS) {
+                File f = new File(base, nome);
+
+                if (!f.exists()) {
+                    System.err.println("AVISO: Arquivo não encontrado: " + f.getPath() +
+                            "  (o programa continuará e apenas ignorará este arquivo)");
+                    continue;
+                }
+
+                int[] dados = lerCSVComoIntArray(f);
+
+                if (dados.length == 0) {
+                    System.err.println("AVISO: Arquivo vazio ou inválido: " + f.getPath());
+                    continue;
+                }
+
+                String[] partes = nome.replace(".csv", "").split("_");
+                String conjunto = partes[0];
+                int tamanho = Integer.parseInt(partes[1]);
+
+                int[] a1 = Arrays.copyOf(dados, dados.length);
+                int[] a2 = Arrays.copyOf(dados, dados.length);
+                int[] a3 = Arrays.copyOf(dados, dados.length);
+
+                long t0 = System.nanoTime();
+                bubbleSort(a1);
+                long t1 = System.nanoTime();
+                long bubbleMs = (t1 - t0) / 1_000_000L;
+
+                long t2 = System.nanoTime();
+                insertionSort(a2);
+                long t3 = System.nanoTime();
+                long insertionMs = (t3 - t2) / 1_000_000L;
+
+                long t4 = System.nanoTime();
+                quickSort(a3);
+                long t5 = System.nanoTime();
+                long quickMs = (t5 - t4) / 1_000_000L;
+
+                resultados.add(new Registro(conjunto, tamanho, bubbleMs, insertionMs, quickMs));
+            }
+
+            imprimirTabelaConsole(resultados);
+            salvarCSV(resultados, Path.of("resultados_tempos.csv"));
+            instrucoesRelatorio();
+
+        } catch (Exception e) {
+            System.err.println("ERRO: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static File obterDiretorioBase(String[] args) {
+
+        if (args != null && args.length > 0) {
+            return new File(args[0]);
+        }
+
+        // 1) Pasta esperada na raiz
+        File raiz = new File("conjuntosDeDados");
+        if (raiz.exists() && raiz.isDirectory()) {
+            return raiz;
+        }
+
+        // 2) Pasta dentro de src (seu caso atual)
+        File src = new File("src/conjuntosDeDados");
+        if (src.exists() && src.isDirectory()) {
+            return src;
+        }
+
+        // 3) Fallback
+        return new File(".");
+    }
+
+    // ===================== ALGORITMOS =====================
+
+    private static void bubbleSort(int[] v) {
+        int n = v.length;
+        boolean trocou;
+        for (int i = 0; i < n - 1; i++) {
+            trocou = false;
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (v[j] > v[j + 1]) {
+                    int tmp = v[j];
+                    v[j] = v[j + 1];
+                    v[j + 1] = tmp;
+                    trocou = true;
+                }
+            }
+            if (!trocou) break;
+        }
+    }
+
+    private static void insertionSort(int[] v) {
+        for (int i = 1; i < v.length; i++) {
+            int chave = v[i];
+            int j = i - 1;
+            while (j >= 0 && v[j] > chave) {
+                v[j + 1] = v[j];
+                j--;
+            }
+            v[j + 1] = chave;
+        }
+    }
+
+    private static void quickSort(int[] v) {
+        quickSortRec(v, 0, v.length - 1);
+    }
+
+    private static void quickSortRec(int[] v, int esq, int dir) {
+        if (esq < dir) {
+            int p = particionaLomuto(v, esq, dir);
+            quickSortRec(v, esq, p - 1);
+            quickSortRec(v, p + 1, dir);
+        }
+    }
+
+    private static int particionaLomuto(int[] v, int esq, int dir) {
+        int pivo = v[dir];
+        int i = esq;
+        for (int j = esq; j < dir; j++) {
+            if (v[j] <= pivo) {
+                troca(v, i, j);
+                i++;
+            }
+        }
+        troca(v, i, dir);
+        return i;
+    }
+
+    private static void troca(int[] v, int i, int j) {
+        if (i != j) {
+            int tmp = v[i];
+            v[i] = v[j];
+            v[j] = tmp;
+        }
+    }
+
+    // ===================== SUPORTE =====================
+
+    private static int[] lerCSVComoIntArray(File f) throws IOException {
+        List<Integer> valores = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                linha = linha.trim();
+                if (linha.isEmpty()) continue;
+                String[] partes = linha.split(",");
+                for (String p : partes) {
+                    String s = p.trim();
+                    if (s.isEmpty()) continue;
+                    if (ehInteiro(s)) valores.add(Integer.parseInt(s));
+                }
+            }
+        }
+        int[] arr = new int[valores.size()];
+        for (int i = 0; i < valores.size(); i++) arr[i] = valores.get(i);
+        return arr;
+    }
+
+    private static boolean ehInteiro(String s) {
+        if (s == null || s.isEmpty()) return false;
+        int start = (s.charAt(0) == '-' || s.charAt(0) == '+') ? 1 : 0;
+        if (start == s.length()) return false;
+        for (int i = start; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    private static void imprimirTabelaConsole(List<Registro> regs) {
+        regs.sort((a, b) -> {
+            int c = a.conjunto.compareTo(b.conjunto);
+            if (c != 0) return c;
+            return Integer.compare(a.tamanho, b.tamanho);
+        });
+
+        String header = String.format("%-13s | %7s | %12s | %14s | %10s",
+                "Conjunto", "Tamanho", "Bubble (ms)", "Insertion (ms)", "Quick (ms)");
+        String linha = "-".repeat(header.length());
+        System.out.println(linha);
+        System.out.println(header);
+        System.out.println(linha);
+
+        for (Registro r : regs) {
+            System.out.printf("%-13s | %7d | %12d | %14d | %10d%n",
+                    capitalize(r.conjunto), r.tamanho, r.bubbleMs, r.insertionMs, r.quickMs);
+        }
+
+        System.out.println(linha);
+        System.out.println("Resumo salvo em: resultados_tempos.csv");
+    }
+
+    private static void salvarCSV(List<Registro> regs, Path destino) throws IOException {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("conjunto,tamanho,bubble_ms,insertion_ms,quick_ms");
+
+        regs.sort((a, b) -> {
+            int c = a.conjunto.compareTo(b.conjunto);
+            if (c != 0) return c;
+            return Integer.compare(a.tamanho, b.tamanho);
+        });
+
+        for (Registro r : regs) {
+            linhas.add(r.conjunto + "," + r.tamanho + "," + r.bubbleMs + "," + r.insertionMs + "," + r.quickMs);
+        }
+
+        Files.write(destino, linhas);
+    }
+
+    private static void instrucoesRelatorio() {
+        System.out.println();
+        System.out.println("=== ORIENTAÇÃO PARA O RELATÓRIO (PDF) ===");
+        System.out.println("- Use os dados de 'resultados_tempos.csv' para montar a tabela e um gráfico comparativo.");
+        System.out.println("- Compare aleatório x crescente x decrescente.");
+        System.out.println("- Comente impacto do tamanho (100 → 10.000).");
+        System.out.println("- Cite que o tempo foi medido com System.nanoTime().");
+        System.out.println("=========================================");
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + (s.length() > 1 ? s.substring(1) : "");
+    }
+}
